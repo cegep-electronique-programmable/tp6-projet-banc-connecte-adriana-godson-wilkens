@@ -41,13 +41,14 @@
 
 */
 
+#include <Arduino.h>
+#include <Print.h>
+#include <stdlib.h>
 
 #ifndef U8G2LIB_HH
 #define U8G2LIB_HH
 
 #ifdef ARDUINO
-#include <Arduino.h>
-#include <Print.h>
 #endif
 
 #include "U8x8lib.h"
