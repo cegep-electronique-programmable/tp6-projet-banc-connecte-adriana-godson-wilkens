@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "C:/Users/e6231718.CMAISONNEUVE/Downloads/tp6-projet-banc-connecte-adriana-godson-wilkens/.pio/build/nodemcuv2/firmware.elf",
+            "executable": "C:/temp/tp6-projet-banc-connecte-adriana-godson-wilkens/.pio/build/nodemcuv2/firmware.elf",
             "projectEnvName": "nodemcuv2",
-            "toolchainBinDir": "C:/Users/e6231718.CMAISONNEUVE/.platformio/packages/toolchain-xtensa/bin",
+            "toolchainBinDir": "C:/Users/lorvi/.platformio/packages/toolchain-xtensa/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -25,18 +25,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "C:/Users/e6231718.CMAISONNEUVE/Downloads/tp6-projet-banc-connecte-adriana-godson-wilkens/.pio/build/nodemcuv2/firmware.elf",
+            "executable": "C:/temp/tp6-projet-banc-connecte-adriana-godson-wilkens/.pio/build/nodemcuv2/firmware.elf",
             "projectEnvName": "nodemcuv2",
-            "toolchainBinDir": "C:/Users/e6231718.CMAISONNEUVE/.platformio/packages/toolchain-xtensa/bin",
+            "toolchainBinDir": "C:/Users/lorvi/.platformio/packages/toolchain-xtensa/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "C:/Users/e6231718.CMAISONNEUVE/Downloads/tp6-projet-banc-connecte-adriana-godson-wilkens/.pio/build/nodemcuv2/firmware.elf",
+            "executable": "C:/temp/tp6-projet-banc-connecte-adriana-godson-wilkens/.pio/build/nodemcuv2/firmware.elf",
             "projectEnvName": "nodemcuv2",
-            "toolchainBinDir": "C:/Users/e6231718.CMAISONNEUVE/.platformio/packages/toolchain-xtensa/bin",
+            "toolchainBinDir": "C:/Users/lorvi/.platformio/packages/toolchain-xtensa/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }
