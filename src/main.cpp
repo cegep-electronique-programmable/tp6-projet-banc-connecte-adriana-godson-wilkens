@@ -94,8 +94,7 @@ void loop() {
       Serial.print("Proximity: ");
       Serial.print(proximity_data);
      }
-     proxi==false;
-     light==true;
+     
   
   
    
@@ -114,8 +113,7 @@ void loop() {
     Serial.print(F("  Ch1: "));
     Serial.println(ch1);
   }
-    proxi==true;
-    light==false;
+    
   
   if (  !apds.readAmbientLightLux(ambient_light) ||
         !apds.readCh0Light(ch0) || 
@@ -142,11 +140,13 @@ void loop() {
     }
     proximity_data = map(proximity_data, 0, proximity_max, 0, 1023);
     */
+    uint8_t assise = personne_assise(proximity_data);
 
     
     Serial.println(proximity_data);
+    Serial.println(assise);
     analogWrite(PWM_LED_PIN, proximity_data);
-    delay(10);
+    delay(250);
   }
   
   // Wait 250 ms before next reading
