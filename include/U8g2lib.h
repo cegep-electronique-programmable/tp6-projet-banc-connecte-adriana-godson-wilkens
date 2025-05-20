@@ -44,6 +44,8 @@
 #include <Arduino.h>
 #include <Print.h>
 #include <stdlib.h>
+#include "U8x8lib.h"
+#include "clib/u8g2.h"
 
 #ifndef U8G2LIB_HH
 #define U8G2LIB_HH
@@ -51,9 +53,6 @@
 #ifdef ARDUINO
 #endif
 
-#include "U8x8lib.h"
-
-#include "clib/u8g2.h"
 
 class U8G2
 #ifdef ARDUINO

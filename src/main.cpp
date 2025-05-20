@@ -33,28 +33,22 @@
 
 */
 
+//includes 
 #include <Arduino.h>
-
-
-#include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
 # include <Wire.h>
-//define 
 #define LED_PIN     25
 #define LED_COUNT  9
 #define chargeur_gpio 16
-#include "affichage.h"
+//#include "affichage.h"
 #include "Proximite.h"
 #include "APDS9930.h"
 #include <U8g2lib.h>
-
+#include <Adafruit_NeoPixel.h>
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
-#endif
-#ifdef U8X8_HAVE_HW_I2C
-
 #endif
 
 // Global Variables
@@ -70,10 +64,11 @@ uint16_t ch1 = 1;
 bool proxi = true;
 bool light = false;
 
+
+int personne_assise(uint8_t data);
+
 #define DUMP_REGS
 #define PWM_LED_PIN       10
-
-// enum
 
 //enum
 enum mode_du_banc {
@@ -91,7 +86,7 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 void colorWipe(uint32_t color, int wait);
 void pulseWhite(uint8_t wait);
 int calcul_luminosité_del(int valeur_capteur_température);
- 
+int personne_assise(uint8_t data);
 void setup() {
   pinMode(chargeur_gpio, INPUT);           // set pin to input
   u8g2.begin();
@@ -186,22 +181,18 @@ void loop() {
       break;
     }
   }
-  // Read the proximity value
-  
-    if ( !apds.readProximity(proximity_data) ) {
-      Serial.println("Error reading proximity value");
+
+  // Read the proximity value 
+  if ( !apds.readProximity(proximity_data) ) {
+    Serial.println("Error reading proximity value");
+  }
+    else 
+    {
+    Serial.print("Proximity: ");
+    Serial.print(proximity_data);
     }
-     else 
-     {
-      Serial.print("Proximity: ");
-      Serial.print(proximity_data);
-     }
-     
-  
-  
-   
-  // Read the light levels (ambient, red, green, blue)
-  
+
+  // Read the light levels (ambient, red, green, blue) 
     if (  !apds.readAmbientLightLux(ambient_light) ||
         !apds.readCh0Light(ch0) || 
         !apds.readCh1Light(ch1) ) {
@@ -216,7 +207,6 @@ void loop() {
     Serial.println(ch1);
   }
     
-  
   if (  !apds.readAmbientLightLux(ambient_light) ||
         !apds.readCh0Light(ch0) || 
         !apds.readCh1Light(ch1) ) {
@@ -244,19 +234,14 @@ void loop() {
     */
     u8g2.clearBuffer();					// clear the internal memory
     u8g2.setFont(u8g2_font_ncenB08_tr);	// choose a suitable font
-    uint8_t assise = personne_assise(proximity_data);
+    int assise = personne_assise(proximity_data);
 
-    u8g2.drawStr(0,10,"Nbr de personnes : %d",proximity_data);
-    u8g2.drawStr(0,10,"Nbr de personnes : %d",assise);
+    u8g2.drawStr(0,10,"Nbr de personnes : %d",personne_assise(proximity_data));
     analogWrite(PWM_LED_PIN, proximity_data);
     u8g2.sendBuffer();					// transfer internal memory to the display
     delay(1000); 
   }
-  
   // Wait 250 ms before next reading
- 
-
-}
 
 void colorWipe(uint32_t color, int wait) {
   for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
@@ -286,4 +271,17 @@ int calcul_luminosité_del(int valeur_capteur_température)
   return valeur_capteur_température;
 }
 
-
+int personne_assise(uint8_t data){
+    uint8_t valeur=0;
+    bool personne=false;
+    if(data>=600){
+      personne=true;
+    }
+    else if(data<600){
+      personne = false;
+    }
+    if(personne==true){
+      valeur+=1;
+    }
+    return valeur;
+}
