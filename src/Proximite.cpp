@@ -1,19 +1,25 @@
 #include "Proximite.h"
 #include <Wire.h>
 #include "APDS9930.h"
+
 bool personne;
 APDS9930 test = APDS9930();
+uint16_t valeur = 0;
 
-int personne_assise(uint16_t data,int valeur)
+int personne_assise(uint16_t data)
 {
+  test.readProximity(data);
   if(data>=600)
   {
-
-    while (data>=600)
-    {
-      test.readProximity(data);
+    if(personne == true){
+      valeur++;
+      personne = false;
     }
-    valeur++;
+  }
+
+  else{
+    personne = true;
   }
   return valeur;
+
 }

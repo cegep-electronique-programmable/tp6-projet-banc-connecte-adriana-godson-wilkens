@@ -39,10 +39,12 @@
 #include "APDS9930.h"
 #include <U8g2lib.h>
 #include <Adafruit_NeoPixel.h>
+
 // define
 #define LED_PIN     10
 #define LED_COUNT  10
-#define chargeur_gpio 16
+#define chargeur_gpio 14
+
 //enum
 enum mode_du_banc {
   etat_de_charge,
@@ -51,162 +53,92 @@ enum mode_du_banc {
 
 // variable global
 int assise=0;
+int telephone=0;
 uint16_t proximity_data = 0;
-float ambient_light = 0; // can also be an unsigned long
-uint16_t ch0 = 0;
-uint16_t ch1 = 0;
-uint8_t BRIGHTNESS = 255; // NeoPixel brightness, 0 (min) to 255 (max)
 
 // construteur
 U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // écran
 APDS9930 apds = APDS9930(); // capteur luminosité et proximité
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);// led
+
 //fonction
-int calcul_luminosité_del(int valeur_capteur_luminosité);
-void led(uint8_t rouge,uint8_t vert,uint8_t bleu,uint8_t valeur_de_luminosité);
+void led(uint8_t rouge, uint8_t vert, uint8_t bleu, uint8_t valeur_de_luminosité);
+ICACHE_RAM_ATTR  void interrupt_chargeur();
 
-void setup() {  
-  pinMode(chargeur_gpio, INPUT);           // set pin to input
 
+void setup() 
+{ 
+  // Initialise l'ecran
   u8g2.begin();
-  // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
-  // Any other board, you can remove this part (but no harm leaving it):
-  #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
-  clock_prescale_set(clock_div_1);
-  #endif
-  // END of Trinket-specific code.
-
+  // Initialise les LEDs 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(BRIGHTNESS);
+  strip.setBrightness(255);
   strip.clear();
-
-  // Initialize Serial port
-  Serial.begin(9600);
-  Serial.println();
-  Serial.println(F("------------------------"));
-  Serial.println(F("APDS-9930 - ProximityLED"));
-  Serial.println(F("------------------------"));
   
   // Initialize APDS-9930 (configure I2C and initial values)
-  if ( apds.init() ) {
-    Serial.println(F("APDS-9930 initialization complete"));
-  } else {
-    Serial.println(F("Something went wrong during APDS-9930 init!"));
-  }
-  
-  // Adjust the Proximity sensor gain
-  if ( !apds.setProximityGain(PGAIN_1X) ) {
-    Serial.println(F("Something went wrong trying to set PGAIN"));
-  }
-  
-  // Start running the APDS-9930 proximity sensor (no interrupts)
-  if ( apds.enableProximitySensor(true) ) {
-    Serial.println(F("Proximity sensor is now running"));
-  } else {
-    Serial.println(F("Something went wrong during sensor init!"));
-  }
-
-  if ( apds.enableLightSensor(true) ) {
-    Serial.println(F("Light sensor is now running"));
-  } else {
-    Serial.println(F("Something went wrong during light sensor init!"));
-  }
-
-  #ifdef DUMP_REGS
-    /* Register dump */
-    uint8_t reg;
-    uint8_t val;
-
-    for(reg = 0x00; reg <= 0x19; reg++) {
-      if( (reg != 0x10) && \
-          (reg != 0x11) )
-      {
-        apds.wireReadDataByte(reg, val);
-        Serial.print(reg, HEX);
-        Serial.print(": 0x");
-        Serial.println(val, HEX);
-      }
-    }
-    apds.wireReadDataByte(0x1E, val);
-    Serial.print(0x1E, HEX);
-    Serial.print(": 0x");
-    Serial.println(val, HEX);
-  #endif
+  apds.init();
+  // Ajuste le Proximity sensor gain
+  apds.setProximityGain(PGAIN_1X); 
+  // Active APDS-9930 proximity sensor et ambient sensor (non interrupts)
+  apds.enableProximitySensor(true);
+  apds.enableLightSensor(true);
+  // Initialise le IO chargeur
+  pinMode(chargeur_gpio,INPUT);
+  // Interrupt
+  attachInterrupt(digitalPinToInterrupt(chargeur_gpio),interrupt_chargeur,FALLING);
 }
 
-void loop() 
-{
-  while(1)
-  {
+void loop(){
+
+  while(1){
+    float valeur_de_luminosité;
+    // lecture de la valeur de luminosité (ambient, red, green, blue) 
+    apds.readAmbientLightLux(valeur_de_luminosité);
+
+    //Serial.print(F("Ambient: "));
+    //Serial.println(valeur_de_luminosité);
+  
+    if (digitalRead(chargeur_gpio)==0){mode_du_banc=etat_de_charge;}
+    else{mode_du_banc=etat_aucun_appareil;}
     
-    int valeur_de_luminosité=200;
-    //BRIGHTNESS=calcul_luminosité_del(valeur_de_luminosité);
-    //if (digitalRead(chargeur_gpio)==1){mode_du_banc=etat_de_charge;}
-    //else{mode_du_banc=etat_aucun_appareil;}
-    mode_du_banc=etat_aucun_appareil;
-    switch(mode_du_banc)
+    switch(mode_du_banc)// Change les DELs de couleur si il y a une personne qui charge ou non
     {
       case etat_de_charge:
-        
-      led(255,0,0,255);//rouge
+        led(255,0,0,valeur_de_luminosité);//met les leds à rouge
       break;
       case etat_aucun_appareil:
-        led(255,255,0,255);//jaune
+        led(255,255,0,valeur_de_luminosité);//met les leds à jaune
       break;
+    }
 
-    }
-      
-    
-   
-    // Read the proximity value 
-    if ( !apds.readProximity(proximity_data) ) {
-      Serial.println("Error reading proximity value");
-    }
-    else 
-    {
-    Serial.print("Proximity: ");
-    Serial.println(proximity_data);
-    }
-    // Read the light levels (ambient, red, green, blue) 
-    apds.readAmbientLightLux(ambient_light);
-    apds.readCh0Light(ch0); 
-    apds.readCh1Light(ch1);
-
-    Serial.print(F("Ambient: "));
-    Serial.print(ambient_light);
-    Serial.print(F("  Ch0: "));
-    Serial.print(ch0);
-    Serial.print(F("  Ch1: "));
-    Serial.println(ch1);
-    
-      
+    //Serial.print("Proximity: ");
+    //Serial.println(proximity_data);
     u8g2.clearBuffer();					// clear the internal memory
     u8g2.setFont(u8g2_font_ncenB08_tr);	// choose a suitable font
-    assise = personne_assise(proximity_data,assise);
+    assise = personne_assise(proximity_data);// fonction qui permet de détecter lorqu'il y a une personne qui passe
     u8g2.setCursor(0,10);
-    u8g2.printf("Nbr de personnes : %d",assise);
+    u8g2.printf("Nbr de personnes : %d",assise);// affiche le nombre de personne assise
+    u8g2.setCursor(0,20);
+    u8g2.printf("Nbr de telephones : %d",telephone);// affiche le nombre de téléphones chargé
     u8g2.sendBuffer();					// transfer internal memory to the display
-    delay(10); 
   }
 }
 
-
-void led(uint8_t rouge,uint8_t vert,uint8_t bleu,uint8_t valeur_de_luminosité) 
-{
+void led(uint8_t rouge,uint8_t vert,uint8_t bleu,uint8_t valeur_de_luminosité){// Permet de configurer la luminosité et la couleur des LEDs
   strip.clear();
-  strip.setBrightness(valeur_de_luminosité);
-  for (size_t i = 0; i < strip.numPixels(); i++)
-  {
-    strip.setPixelColor(i,strip.Color(rouge,vert,bleu));// jaune
+  strip.setBrightness(valeur_de_luminosité);// selctionne la luminosité
+
+  for (size_t i = 0; i < strip.numPixels(); i++){
+    strip.setPixelColor(i,strip.Color(rouge,vert,bleu));// selctionne la couleur
   }
+  //Serial.print("luminosite des led:");
+  //Serial.println(valeur_de_luminosité);
   strip.show();
-  delay(500);
+  delay(10);
 }
 
-int calcul_luminosité_del(int valeur_capteur_luminosité)
-{
-  valeur_capteur_luminosité= (-1*valeur_capteur_luminosité)+256;
-  return valeur_capteur_luminosité;
+ICACHE_RAM_ATTR  void interrupt_chargeur(){// Permet de detecter lorsqu'il y a un téléphone qui se charge
+  telephone++;
+  mode_du_banc=etat_de_charge;
 }
-
