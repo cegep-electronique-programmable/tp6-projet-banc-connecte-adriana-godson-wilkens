@@ -35,23 +35,14 @@
 
 //includes 
 #include <Arduino.h>
-#ifdef __AVR__
- #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
-#endif
-# include <Wire.h>
-#define LED_PIN     10
-#define LED_COUNT  9
-#define chargeur_gpio 16
-//#include "affichage.h"
 #include "Proximite.h"
 #include "APDS9930.h"
 #include <U8g2lib.h>
 #include <Adafruit_NeoPixel.h>
-#ifdef U8X8_HAVE_HW_SPI
-#include <SPI.h>
-#endif
-#define DUMP_REGS
-
+// define
+#define LED_PIN     10
+#define LED_COUNT  10
+#define chargeur_gpio 16
 //enum
 enum mode_du_banc {
   etat_de_charge,
@@ -60,29 +51,23 @@ enum mode_du_banc {
 
 // variable global
 int assise=0;
-uint8_t BRIGHTNESS = 255; // NeoPixel brightness, 0 (min) to 255 (max)
-bool assis= false;
 uint16_t proximity_data = 0;
-int proximity_max = 0;
 float ambient_light = 0; // can also be an unsigned long
 uint16_t ch0 = 0;
-uint16_t ch1 = 1;
-bool proxi = true;
-bool light = false;
+uint16_t ch1 = 0;
+uint8_t BRIGHTNESS = 255; // NeoPixel brightness, 0 (min) to 255 (max)
 
-// constru
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
-APDS9930 apds = APDS9930();
-// Declare our NeoPixel strip object:
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
-void colorWipe(uint32_t color, int wait);
-void pulseWhite(uint8_t wait);
-int calcul_luminosité_del(int valeur_capteur_température);
+// construteur
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // écran
+APDS9930 apds = APDS9930(); // capteur luminosité et proximité
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);// led
+//fonction
+int calcul_luminosité_del(int valeur_capteur_luminosité);
+void led(uint8_t rouge,uint8_t vert,uint8_t bleu,uint8_t valeur_de_luminosité);
 
-void setup() 
-{
-  
+void setup() {  
   pinMode(chargeur_gpio, INPUT);           // set pin to input
+
   u8g2.begin();
   // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
   // Any other board, you can remove this part (but no harm leaving it):
@@ -94,6 +79,7 @@ void setup()
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(BRIGHTNESS);
+  strip.clear();
 
   // Initialize Serial port
   Serial.begin(9600);
@@ -127,26 +113,26 @@ void setup()
     Serial.println(F("Something went wrong during light sensor init!"));
   }
 
-#ifdef DUMP_REGS
-  /* Register dump */
-  uint8_t reg;
-  uint8_t val;
+  #ifdef DUMP_REGS
+    /* Register dump */
+    uint8_t reg;
+    uint8_t val;
 
-  for(reg = 0x00; reg <= 0x19; reg++) {
-    if( (reg != 0x10) && \
-        (reg != 0x11) )
-    {
-      apds.wireReadDataByte(reg, val);
-      Serial.print(reg, HEX);
-      Serial.print(": 0x");
-      Serial.println(val, HEX);
+    for(reg = 0x00; reg <= 0x19; reg++) {
+      if( (reg != 0x10) && \
+          (reg != 0x11) )
+      {
+        apds.wireReadDataByte(reg, val);
+        Serial.print(reg, HEX);
+        Serial.print(": 0x");
+        Serial.println(val, HEX);
+      }
     }
-  }
-  apds.wireReadDataByte(0x1E, val);
-  Serial.print(0x1E, HEX);
-  Serial.print(": 0x");
-  Serial.println(val, HEX);
-#endif
+    apds.wireReadDataByte(0x1E, val);
+    Serial.print(0x1E, HEX);
+    Serial.print(": 0x");
+    Serial.println(val, HEX);
+  #endif
 }
 
 void loop() 
@@ -154,41 +140,24 @@ void loop()
   while(1)
   {
     
-    while (1)
+    int valeur_de_luminosité=200;
+    //BRIGHTNESS=calcul_luminosité_del(valeur_de_luminosité);
+    //if (digitalRead(chargeur_gpio)==1){mode_du_banc=etat_de_charge;}
+    //else{mode_du_banc=etat_aucun_appareil;}
+    mode_du_banc=etat_aucun_appareil;
+    switch(mode_du_banc)
     {
-      int valeur_de_luminosité=200;
-      //BRIGHTNESS=calcul_luminosité_del(valeur_de_luminosité);
-      //if (digitalRead(chargeur_gpio)==1){mode_du_banc=etat_de_charge;}
-      //else{mode_du_banc=etat_aucun_appareil;}
-      mode_du_banc=etat_de_charge;
-      switch(mode_du_banc)
-      {
-        case etat_de_charge:
-          
-          strip.setBrightness(20);
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-          strip.setPixelColor(10,strip.Color(255, 0, 0));         //  Set pixel's color (in RAM)
-          strip.show();
-        break;
-        case etat_aucun_appareil:
-          strip.setBrightness(valeur_de_luminosité);
-          strip.setPixelColor(9,255,255,0);// jaune
-        break;
+      case etat_de_charge:
+        
+      led(255,0,0,255);//rouge
+      break;
+      case etat_aucun_appareil:
+        led(255,255,0,255);//jaune
+      break;
 
-      }
-      Serial.println("test");
     }
+      
+    
    
     // Read the proximity value 
     if ( !apds.readProximity(proximity_data) ) {
@@ -223,80 +192,21 @@ void loop()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Wait 250 ms before next reading
-
-void colorWipe(uint32_t color, int wait) {
-  for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
-    strip.setPixelColor(i, color);         //  Set pixel's color (in RAM)
-    strip.show();                          //  Update strip to match
-    delay(wait);                           //  Pause for a moment
-  }
-}
-
-void pulseWhite(uint8_t wait) {
-  for(int j=0; j<256; j++) { // Ramp up from 0 to 255
-    // Fill entire strip with white at gamma-corrected brightness level 'j':
-    strip.fill(strip.Color(0, 0, 0, strip.gamma8(j)));
-    strip.show();
-    delay(wait);
-  }
-
-  for(int j=255; j>=0; j--) { // Ramp down from 255 to 0
-    strip.fill(strip.Color(0, 0, 0, strip.gamma8(j)));
-    strip.show();
-    delay(wait);
-  }
-}
-
-int calcul_luminosité_del(int valeur_capteur_température)
+void led(uint8_t rouge,uint8_t vert,uint8_t bleu,uint8_t valeur_de_luminosité) 
 {
-  return valeur_capteur_température;
+  strip.clear();
+  strip.setBrightness(valeur_de_luminosité);
+  for (size_t i = 0; i < strip.numPixels(); i++)
+  {
+    strip.setPixelColor(i,strip.Color(rouge,vert,bleu));// jaune
+  }
+  strip.show();
+  delay(500);
+}
+
+int calcul_luminosité_del(int valeur_capteur_luminosité)
+{
+  valeur_capteur_luminosité= (-1*valeur_capteur_luminosité)+256;
+  return valeur_capteur_luminosité;
 }
 
